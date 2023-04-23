@@ -194,6 +194,7 @@ def train(
     default=get_optimal_device(),
     help="device",
 )
+@click.option("-h", "--half", type=bool, default=True, help="whether to use fp16 inference")
 @click.option("-ch", "--chunk-seconds", type=float, default=0.5, help="chunk seconds")
 @click.option(
     "-ab/-nab",
@@ -222,6 +223,7 @@ def infer(
     chunk_seconds: float = 0.5,
     absolute_thresh: bool = False,
     device: str | torch.device = get_optimal_device(),
+    half: bool = True
 ):
     """Inference"""
     from so_vits_svc_fork.inference.main import infer
@@ -265,6 +267,7 @@ def infer(
         chunk_seconds=chunk_seconds,
         absolute_thresh=absolute_thresh,
         device=device,
+        half=half
     )
 
 

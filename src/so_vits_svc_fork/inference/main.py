@@ -12,6 +12,7 @@ from cm_time import timer
 
 from so_vits_svc_fork.inference.core import RealtimeVC, RealtimeVC2, Svc
 from so_vits_svc_fork.utils import get_optimal_device
+from  torch.cuda.amp import autocast
 
 LOG = getLogger(__name__)
 
@@ -37,6 +38,7 @@ def infer(
     chunk_seconds: float = 0.5,
     absolute_thresh: bool = False,
     device: str | torch.device = get_optimal_device(),
+    half: bool = False
 ):
     model_path = Path(model_path)
     output_path = Path(output_path)
@@ -50,6 +52,7 @@ def infer(
         if cluster_model_path
         else None,
         device=device,
+        half=half
     )
 
     audio, _ = librosa.load(input_path, sr=svc_model.target_sample)

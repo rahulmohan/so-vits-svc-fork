@@ -11,6 +11,7 @@ import numpy as np
 import torch
 from cm_time import timer
 from numpy import dtype, float32, ndarray
+from  torch.cuda.amp import autocast
 
 import so_vits_svc_fork.f0
 from so_vits_svc_fork import cluster, utils
@@ -109,6 +110,7 @@ class Svc:
         self.hubert_model = utils.get_hubert_model(
             self.device, self.hps.data.get("contentvec_final_proj", True)
         )
+        self.half = half
         self.dtype = torch.float16 if half else torch.float32
         self.contentvec_final_proj = self.hps.data.__dict__.get(
             "contentvec_final_proj", True
@@ -162,7 +164,10 @@ class Svc:
             cluster_c = cluster.get_cluster_center_result(
                 self.cluster_model, c.cpu().numpy().T, speaker
             ).T
-            cluster_c = torch.FloatTensor(cluster_c).to(self.device)
+            if self.half:
+                cluster_c = torch.HalfTensor(cluster_c).to(self.device)
+            else:
+                cluster_c = torch.FloatTensor(cluster_c).to(self.device)
             c = cluster_infer_ratio * cluster_c + (1 - cluster_infer_ratio) * c
 
         c = c.unsqueeze(0)
@@ -215,14 +220,15 @@ class Svc:
         # inference
         with torch.no_grad():
             with timer() as t:
-                audio = self.net_g.infer(
-                    c,
-                    f0=f0,
-                    g=sid,
-                    uv=uv,
-                    predict_f0=auto_predict_f0,
-                    noice_scale=noise_scale,
-                )[0, 0].data.float()
+                with autocast():
+                    audio = self.net_g.infer(
+                        c,
+                        f0=f0,
+                        g=sid,
+                        uv=uv,
+                        predict_f0=auto_predict_f0,
+                        noice_scale=noise_scale,
+                    )[0, 0].data.float()
             audio_duration = audio.shape[-1] / self.target_sample
             LOG.info(
                 f"Inferece time: {t.elapsed:.2f}s, RTF: {t.elapsed / audio_duration:.2f}"
